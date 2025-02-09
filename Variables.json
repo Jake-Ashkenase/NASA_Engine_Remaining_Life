@@ -1,0 +1,227 @@
+{
+  "alt": {
+    "name": "Altitude",
+    "description": "",
+    "units": ""
+  },
+  "Mach": {
+    "name": "Flight Mach number",
+    "description": "",
+    "units": ""
+  },
+  "TRA": {
+    "name": "Throttle-resolver angle",
+    "description": "",
+    "units": ""
+  },
+  "T2": {
+    "name": "Total temperature of the fan inlet",
+    "description": "",
+    "units": ""
+  },
+  "Wf": {
+    "name": "Fuel flow",
+    "description": "",
+    "units": ""
+  },
+  "Nf": {
+    "name": "Physical fan speed",
+    "description": "",
+    "units": ""
+  },
+  "Nc": {
+    "name": "Physical core speed",
+    "description": "",
+    "units": ""
+  },
+  "T24": {
+    "name": "Total temp at LPC outlet",
+    "description": "",
+    "units": ""
+  },
+  "T30": {
+    "name": "Total temp at HPC outlet",
+    "description": "",
+    "units": ""
+  },
+  "T48": {
+    "name": "Total temp at HPT outlet",
+    "description": "",
+    "units": ""
+  },
+  "T50": {
+    "name": "Total temp at LPT outlet",
+    "description": "",
+    "units": ""
+  },
+  "P15": {
+    "name": "Total pressure in bypass-duct",
+    "description": "",
+    "units": ""
+  },
+  "P2": {
+    "name": "Total pressure at fan inlet",
+    "description": "",
+    "units": ""
+  },
+  "P21": {
+    "name": "Total pressure at fan outlet",
+    "description": "",
+    "units": ""
+  },
+  "P24": {
+    "name": "Total pressure at LPC outlet",
+    "description": "",
+    "units": ""
+  },
+  "Ps30": {
+    "name": "Static pressure at HPC outlet",
+    "description": "",
+    "units": ""
+  },
+  "P40": {
+    "name": "Total pressure at burner outlet",
+    "description": "",
+    "units": ""
+  },
+  "P50": {
+    "name": "Total pressure at LPT outlet",
+    "description": "",
+    "units": ""
+  },
+  "T40": {
+    "name": "Total Temp. at burner outlet",
+    "description": "",
+    "units": ""
+  },
+  "P30": {
+    "name": "Total pressure at HPC outlet",
+    "description": "",
+    "units": ""
+  },
+  "P45": {
+    "name": "Total pressure at HPT outlet",
+    "description": "",
+    "units": ""
+  },
+  "W21": {
+    "name": "Fan flow",
+    "description": "",
+    "units": ""
+  },
+  "W31": {
+    "name": "HPT coolant bleed",
+    "description": "",
+    "units": ""
+  },
+  "W32": {
+    "name": "HPT coolant bleed",
+    "description": "",
+    "units": ""
+  },
+  "W48": {
+    "name": "Flow out of HPT",
+    "description": "",
+    "units": ""
+  },
+  "W50": {
+    "name": "Flow out of LPT",
+    "description": "",
+    "units": ""
+  },
+  "SmFan": {
+    "name": "Fan stall margin",
+    "description": "",
+    "units": ""
+  },
+  "SmLPC": {
+    "name": "LPC stall margin",
+    "description": "",
+    "units": ""
+  },
+  "SmHPC": {
+    "name": "HPC stall margin",
+    "description": "",
+    "units": ""
+  },
+  "phi": {
+    "name": "Ratio of fuel flow to Ps30",
+    "description": "",
+    "units": ""
+  },
+  "fan_eff_mod": {
+    "name": "Fan efficiency modifier",
+    "description": "",
+    "units": ""
+  },
+  "fan_flow_mod": {
+    "name": "Fan flow modifier",
+    "description": "",
+    "units": ""
+  },
+  "LPC_eff_mod": {
+    "name": "LPC efficiency modifier",
+    "description": "",
+    "units": ""
+  },
+  "LPC_flow_mod": {
+    "name": "LPC flow modifier",
+    "description": "",
+    "units": ""
+  },
+  "HPC_eff_mod": {
+    "name": "HPC efficiency modifier",
+    "description": "",
+    "units": ""
+  },
+  "HPC_flow_mod": {
+    "name": "HPC flow modifier",
+    "description": "",
+    "units": ""
+  },
+  "HPT_eff_mod": {
+    "name": "HPT efficiency modifier",
+    "description": "",
+    "units": ""
+  },
+  "HPT_flow_mod": {
+    "name": "HPT flow modifier",
+    "description": "",
+    "units": ""
+  },
+  "LPT_eff_mod": {
+    "name": "LPT efficiency modifier",
+    "description": "",
+    "units": ""
+  },
+  "LPT_flow_mod": {
+    "name": "LPT flow modifier",
+    "description": "",
+    "units": ""
+  },
+  "unit": {
+    "name": "Unit Number",
+    "description": "",
+    "units": ""
+  },
+  "cycle": {
+    "name": "Flight cycle number",
+    "description": "",
+    "units": ""
+  },
+  "Fc": {
+    "name": "Flight class",
+    "description": "",
+    "units": ""
+  },
+  "h_s": {
+    "name": "Health state",
+    "description": "",
+    "units": ""
+  },
+  "RUM": {
+    "name": "Remaining Useful Life",
+    "description": "",
+    "units": ""
+  }
+}
