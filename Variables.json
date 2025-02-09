@@ -6,7 +6,7 @@
   },
   "Mach": {
     "name": "Flight Mach number",
-    "description": "",
+    "description": "ratio that describes how fast an aircraft is traveling compared to the speed of sound",
     "units": ""
   },
   "TRA": {
@@ -56,7 +56,7 @@
   },
   "P15": {
     "name": "Total pressure in bypass-duct",
-    "description": "",
+    "description": "The total pressure in the bypass duct of an engine refers to the combined static and dynamic pressure of the air flowing through the bypass duct, essentially representing the total energy of the air within that section of a turbofan engine, which is typically slightly lower than the total pressure at the fan inlet due to friction losses within the duct itself",
     "units": ""
   },
   "P2": {
