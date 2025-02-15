@@ -1,135 +1,77 @@
+from torch.utils.data import Dataset, DataLoader
 import h5py
 import torch
-from torch.utils.data import Dataset
+import numpy as np
 
-
-class RULDatasetNOT(Dataset):
-    """
-    Custom PyTorch Dataset for handling large HDF5 datasets efficiently.
-    Loads data lazily to avoid memory issues.
-    """
-
-    def __init__(self, hdf5_file, transform=None, normalize=True):
-        """
-        Initializes the dataset.
-
-        Parameters:
-            hdf5_file (str): Path to the HDF5 file.
-            transform (callable, optional): Optional transformation to apply.
-            normalize (bool): Whether to normalize the data.
-        """
-        self.hdf5_file = hdf5_file
-        self.transform = transform
-        self.normalize = normalize
-
-        # Open the file to read metadata but do not load data into memory
-        with h5py.File(self.hdf5_file, "r", swmr=True, libver='latest') as f:
-            self.data_size = f["X"].shape[0]  # Number of samples
-            self.feature_shape = f["X"].shape[1:]  # (window_size, num_features)
-
-            # Compute mean and std for normalization if required
-            if self.normalize:
-                self.mean = f["X"][:10000].mean(axis=(0, 1))  # Sampled mean
-                self.std = f["X"][:10000].std(axis=(0, 1)) + 1e-8  # Sampled std (avoid div by zero)
-
-    def __len__(self):
-        """Returns total number of samples in the dataset."""
-        return self.data_size
-
-    def __getitem__(self, idx):
-        """Loads and returns a sample (X, y) from the dataset lazily."""
-        with h5py.File(self.hdf5_file, "r", swmr=True, libver='latest') as f:
-            X = f["X"][idx]  # Shape: (window_size, num_features)
-            y = f["y"][idx]  # Scalar target
-
-        # Normalize data
-        if self.normalize:
-            X = (X - self.mean) / self.std
-
-        # Apply any transformations (e.g., augmentations)
-        if self.transform:
-            X = self.transform(X)
-
-        # Convert to PyTorch tensors
-        X = torch.tensor(X, dtype=torch.float32)
-        y = torch.tensor(y, dtype=torch.float32)
-
-        return X, y
-
-
-class RULDatasetOld(Dataset):
-    def __init__(self, hdf5_file, transform=None, normalize=True):
-        self.hdf5_file = hdf5_file
-        self.transform = transform
-        self.normalize = normalize
-
-        # Open file once, keep reference
-        self.file = h5py.File(self.hdf5_file, "r", swmr=True)
-
-        self.data_size = self.file["X"].shape[0]
-        self.feature_shape = self.file["X"].shape[1:]
-
-        if self.normalize:
-            self.mean = self.file["X"][:10000].mean(axis=(0, 1))
-            self.std = self.file["X"][:10000].std(axis=(0, 1)) + 1e-8
-
-    def __len__(self):
-        return self.data_size
-
-    def __getitem__(self, idx):
-        """Loads and returns a sample (X, y) lazily."""
-        X = self.file["X"][idx]
-        y = self.file["y"][idx]
-
-        if self.normalize:
-            X = (X - self.mean) / self.std
-
-        if self.transform:
-            X = self.transform(X)
-
-        X = torch.tensor(X, dtype=torch.float32)
-        y = torch.tensor(y, dtype=torch.float32)
-
-        return X, y
-
-    def __del__(self):
-        """Ensures file is closed properly when dataset is deleted."""
-        self.file.close()
 
 class RULDataset(Dataset):
-    def __init__(self, hdf5_file):
-        self.hdf5_file = hdf5_file
-        self.file = None  # Not opened yet
+    def __init__(self, X, y, dim="1d"):
+        """
+        Initialize the dataset by passing a DataFrame.
+        Args:
+            dataframe (pd.DataFrame): DataFrame with pixel data and labels.
+        """
+        self.X = torch.tensor(X, dtype=torch.float32)
+        self.y = torch.tensor(y, dtype=torch.float32)
+        self.dim = dim
 
-    def init_worker(self):
-        self.file = h5py.File(self.hdf5_file, "r", swmr=True, libver='latest')
-        self.X = self.file["X"]
-        self.y = self.file["y"]
-        # read shape, mean, std, etc.
-        self.data_size = self.file["X"].shape[0]
-        self.feature_shape = self.file["X"].shape[1:]
-
-        if self.normalize:
-            self.mean = self.file["X"][:10000].mean(axis=(0, 1))
-            self.std = self.file["X"][:10000].std(axis=(0, 1)) + 1e-8
+    def __len__(self):
+        """
+        Return the total number of samples in the dataset.
+        """
+        return len(self.y)
 
     def __getitem__(self, idx):
-        X = self.file["X"][idx]
-        y = self.file["y"][idx]
+        """
+        Retrieve a single sample from the dataset.
+        Args:
+            idx (int): Index of the sample to retrieve.
+        Returns:
+            (torch.Tensor, torch.Tensor): Tuple of features and label.
+        """
+        X_sample = self.X[idx]
+        y_sample = self.y[idx]
 
-        if self.normalize:
-            X = (X - self.mean) / self.std
+        if self.dim == "2d":
+            X_sample = X_sample.unsqueeze(0)
 
-        if self.transform:
-            X = self.transform(X)
-
-        X = torch.tensor(X, dtype=torch.float32)
-        y = torch.tensor(y, dtype=torch.float32)
-
-        return X, y
-
-    def __del__(self):
-        """Ensures file is closed properly when dataset is deleted."""
-        self.file.close()
+        return X_sample, y_sample
 
 
+def create_train_test_dataloaders(X, y, test_size=0.2, batch_size=64, shuffle=True, dim="1d"):
+    """
+    Split the DataFrame into train and test sets and create DataLoaders.
+    Args:
+        dataframe (pd.DataFrame): DataFrame containing the data.
+        test_size (float): Proportion of the data to be used as test data.
+        batch_size (int): Number of samples per batch.
+        shuffle (bool): Whether to shuffle the data.
+    Returns:
+        tuple: (train_loader, test_loader)
+    """
+    shuffle_idxs = np.random.permutation(len(y))
+    X_shuffled = X[shuffle_idxs]
+    y_shuffled = y[shuffle_idxs]
+
+    split_idx = int(len(y) * test_size)
+    X_test = X_shuffled[:split_idx]
+    X_train = X_shuffled[split_idx:]
+    y_test = y[:split_idx]
+    y_train = y[:split_idx]
+
+    # Create train and test datasets
+    train_dataset = RULDataset(X_train, y_train, dim=dim)
+    test_dataset = RULDataset(X_test, y_test, dim=dim)
+
+    # Create DataLoaders for train and test sets
+    train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=shuffle)
+    test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False)
+
+    return train_loader, test_loader
+
+
+def load_from_hdf5(filename="data.h5"):
+    with h5py.File(filename, "r") as f:
+        X = f["X"][:]
+        y = f["y"][:]
+    return X, y

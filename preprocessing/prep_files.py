@@ -41,8 +41,7 @@ def make_windows(hdf5_file, index_file, output_file, dataset_type="train", windo
     print(f"Feature columns: {feature_cols}")
 
     # Open output HDF5 file for writing in append mode
-    with h5py.File(output_file, "w", libver='latest') as out_file:
-        out_file.swmr_mode = True
+    with h5py.File(output_file, "w") as out_file:
         X_dset = out_file.create_dataset(
             "X", shape=(0, window_size, len(feature_cols)),
             maxshape=(None, window_size, len(feature_cols)),
@@ -84,7 +83,7 @@ def make_windows(hdf5_file, index_file, output_file, dataset_type="train", windo
 
             # Write to HDF5 in smaller batches
             if len(X_chunk) > 0:
-                batch_size = 10000  # Adjust for memory efficiency
+                batch_size = 2000  # Adjust for memory efficiency
                 for i in range(0, len(X_chunk), batch_size):
                     X_batch = X_chunk[i:i + batch_size]
                     y_batch = y_chunk[i:i + batch_size]
@@ -110,7 +109,7 @@ def main():
         output_file="engine_train_windows.h5",
         dataset_type="train",
         window_size=50,
-        overlap=10,
+        overlap=5,
         target_col="RUL",
         id_cols=["unit", "cycle"],
         chunk_size=50
