@@ -2,6 +2,7 @@ from torch.utils.data import Dataset, DataLoader
 import h5py
 import torch
 import numpy as np
+from collections import defaultdict
 
 
 class RULDataset(Dataset):
@@ -38,26 +39,50 @@ class RULDataset(Dataset):
         return X_sample, y_sample
 
 
-def create_train_test_dataloaders(X, y, test_size=0.2, batch_size=64, shuffle=True, dim="1d"):
+def create_train_test_dataloaders(X, y, test_size=0.2, batch_size=64, shuffle=True, dim="1d",
+                                  max_samples_per_class=None):
     """
     Split the DataFrame into train and test sets and create DataLoaders.
     Args:
-        dataframe (pd.DataFrame): DataFrame containing the data.
+        X (np.ndarray): Input features.
+        y (np.ndarray): Target labels.
         test_size (float): Proportion of the data to be used as test data.
         batch_size (int): Number of samples per batch.
         shuffle (bool): Whether to shuffle the data.
+        dim (str): Dimension type for the dataset.
+        max_samples_per_class (int): Maximum samples to take for each unique y value.
     Returns:
         tuple: (train_loader, test_loader)
     """
-    shuffle_idxs = np.random.permutation(len(y))
-    X_shuffled = X[shuffle_idxs]
-    y_shuffled = y[shuffle_idxs]
+    limited_X = X
+    limited_y = y
+    if max_samples_per_class is not None:
+        # Collect indices for each unique y value
+        class_samples = defaultdict(list)
 
-    split_idx = int(len(y) * test_size)
-    X_test = X_shuffled[:split_idx]
-    X_train = X_shuffled[split_idx:]
-    y_test = y[:split_idx]
-    y_train = y[:split_idx]
+        for idx in range(len(y)):
+            class_samples[y[idx]].append(idx)  # Store the index of the sample
+
+        # Create a list to hold the limited indices
+        limited_indices = []
+
+        for class_label, indices in class_samples.items():
+            limited_indices.extend(indices[:max_samples_per_class])
+
+        # Create a subset of the dataset with the limited indices
+        limited_X = X[limited_indices]
+        limited_y = y[limited_indices]
+
+    # Shuffle the limited dataset if required
+    if shuffle:
+        shuffle_idxs = np.random.permutation(len(limited_y))
+        limited_X = limited_X[shuffle_idxs]
+        limited_y = limited_y[shuffle_idxs]
+
+    # Split the limited dataset into train and test sets
+    split_idx = int(len(limited_y) * (1 - test_size))
+    X_train, X_test = limited_X[:split_idx], limited_X[split_idx:]
+    y_train, y_test = limited_y[:split_idx], limited_y[split_idx:]
 
     # Create train and test datasets
     train_dataset = RULDataset(X_train, y_train, dim=dim)
@@ -68,10 +93,3 @@ def create_train_test_dataloaders(X, y, test_size=0.2, batch_size=64, shuffle=Tr
     test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False)
 
     return train_loader, test_loader
-
-
-def load_from_hdf5(filename="data.h5"):
-    with h5py.File(filename, "r") as f:
-        X = f["X"][:]
-        y = f["y"][:]
-    return X, y
