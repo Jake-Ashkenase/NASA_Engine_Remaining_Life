@@ -39,7 +39,7 @@ class RULDataset(Dataset):
         return X_sample, y_sample
 
 
-def create_train_test_dataloaders(X, y, test_size=0.2, batch_size=64, shuffle=True, dim="1d",
+def create_train_test_dataloaders_old(X, y, test_size=0.2, batch_size=64, shuffle=True, dim="1d",
                                   max_samples_per_class=None):
     """
     Split the DataFrame into train and test sets and create DataLoaders.
@@ -57,6 +57,7 @@ def create_train_test_dataloaders(X, y, test_size=0.2, batch_size=64, shuffle=Tr
     limited_X = X
     limited_y = y
     if max_samples_per_class is not None:
+        print("balancing classes")
         # Collect indices for each unique y value
         class_samples = defaultdict(list)
 
@@ -89,6 +90,65 @@ def create_train_test_dataloaders(X, y, test_size=0.2, batch_size=64, shuffle=Tr
     test_dataset = RULDataset(X_test, y_test, dim=dim)
 
     # Create DataLoaders for train and test sets
+    train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=shuffle)
+    test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False)
+
+    return train_loader, test_loader
+
+
+def create_train_test_dataloaders(X, y, test_size=0.2, batch_size=64, shuffle=True, dim="1d",
+                                  max_samples_per_class=None):
+    """
+    Split the dataset into train and test sets and create DataLoaders.
+    Args:
+        X (np.ndarray): Input features.
+        y (np.ndarray): Target labels.
+        test_size (float): Proportion of data to use for testing.
+        batch_size (int): Number of samples per batch.
+        shuffle (bool): Whether to shuffle the dataset.
+        dim (str): "1d" for 1D CNN input, "2d" for 2D CNN input.
+        max_samples_per_class (int): Maximum samples per class to balance data.
+
+    Returns:
+        tuple: (train_loader, test_loader)
+    """
+    X, y = np.array(X), np.array(y)  # Ensure input is NumPy array
+
+    # Ensure class balancing if max_samples_per_class is set
+    if max_samples_per_class is not None:
+        print("Balancing classes...")
+        class_samples = defaultdict(list)
+
+        # Collect indices for each class
+        for idx, label in enumerate(y):
+            class_samples[label].append(idx)
+
+        # Limit the number of samples per class
+        limited_indices = []
+        for class_label, indices in class_samples.items():
+            limited_indices.extend(indices[:max_samples_per_class])
+
+        # Subset data
+        X, y = X[limited_indices], y[limited_indices]
+
+    # Shuffle dataset
+    if shuffle:
+        shuffle_idxs = np.random.permutation(len(y))
+        X, y = X[shuffle_idxs], y[shuffle_idxs]
+
+    # Split into train and test sets
+    split_idx = int(len(y) * (1 - test_size))
+    X_train, X_test = X[:split_idx], X[split_idx:]
+    y_train, y_test = y[:split_idx], y[split_idx:]
+
+    # Create datasets
+    train_dataset = RULDataset(X_train, y_train, dim=dim)
+    test_dataset = RULDataset(X_test, y_test, dim=dim)
+
+    # Verify sizes before creating DataLoaders
+    print(f"Train set size: {len(train_dataset)}, Test set size: {len(test_dataset)}")
+
+    # Create DataLoaders
     train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=shuffle)
     test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False)
 
