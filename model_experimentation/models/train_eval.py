@@ -14,6 +14,9 @@ from data_structures import EarlyStopper
 from .regression import CNNRULRegression
 from .classification import CNNRULClassifier
 
+from torch.utils.tensorboard import SummaryWriter
+writer = SummaryWriter(log_dir="runs/test_embeddings")
+
 
 def evaluate_model(model, data_loader, criterion, device, print_loss=True):
     model.eval()
@@ -28,7 +31,7 @@ def evaluate_model(model, data_loader, criterion, device, print_loss=True):
                 inputs = inputs.permute(0, 2, 1)
 
             outputs = model(inputs).squeeze()
-            loss = criterion(outputs, targets)
+            loss = criterion(outputs, targets.long()) # had to change from targets to targets.long so it would work for 1d CNN
             overall_loss += loss.item()
 
     avg_loss = overall_loss / len(data_loader)
@@ -56,7 +59,7 @@ def train_model(model, train_loader, test_loader, criterion, optimizer, device, 
 
             optimizer.zero_grad()
             outputs = model(inputs).squeeze()
-            loss = criterion(outputs, targets)
+            loss = criterion(outputs, targets.long()) # had to change from targets to targets.long so it would work for 1d CNN
             loss.backward()
             optimizer.step()
 
@@ -77,8 +80,55 @@ def train_model(model, train_loader, test_loader, criterion, optimizer, device, 
 
             if early_stopper.early_stop(avg_train_loss):
                 break
+        
+    if hasattr(model, 'feature_extractor'):
+        log_embeddings(model, train_loader, device)
 
     return history
+
+
+def log_embeddings(model, data_loader, device, num_samples=500):
+    """
+    Logs embeddings for visualization in TensorBoard.
+
+    Works with:
+    - CNNRULClassifier (1D CNN)
+    - CNNRUL2DClassifier (2D CNN)
+    - HybridCNNClassifier (1D + 2D Hybrid CNN)
+    - ComplexHybridCNNClassifier (Advanced 1D + 2D Hybrid CNN)
+
+    Parameters:
+    - model: PyTorch model.
+    - data_loader: DataLoader providing test/validation data.
+    - device: 'cuda' or 'cpu'.
+    - num_samples: Max number of samples to log.
+    """
+    model.eval()
+    embeddings = []
+    labels_list = []
+
+    with torch.no_grad():
+        for i, (inputs, labels) in enumerate(data_loader):
+            inputs, labels = inputs.to(device), labels.to(device)
+            if isinstance(model, CNNRULClassifier):
+                print("got here")
+                inputs = inputs.permute(0, 2, 1)
+
+            # Use feature_extractor()
+            features = model.feature_extractor(inputs)
+            embeddings.append(features.cpu().numpy())
+            labels_list.append(labels.cpu().numpy())
+
+            # Stop once we've collected enough samples
+            if len(embeddings) * inputs.shape[0] >= num_samples:
+                break
+
+    embeddings = np.concatenate(embeddings, axis=0)
+    labels_list = np.concatenate(labels_list, axis=0)
+
+    # Log embeddings to TensorBoard
+    writer.add_embedding(mat=embeddings, metadata=labels_list, tag="Model_Embeddings")
+    writer.close()
 
 
 def plot_loss(history):

@@ -28,6 +28,19 @@ class CNNRUL2DClassifier(nn.Module):
         self.fc1 = nn.Linear(128 * pooled_seq * pooled_features, 64)
         self.fc2 = nn.Linear(64, num_classes)
 
+    def feature_extractor(self, x):
+        """Extract embeddings before classification layer."""
+        x = torch.relu(self.conv1(x))
+        x = self.pool(x)
+        x = torch.relu(self.conv2(x))
+        x = self.pool(x)
+        x = torch.relu(self.conv3(x))
+        x = self.pool(x)
+
+        # Flatten and pass through FC layers
+        x = self.flatten(x)
+        return torch.relu(self.fc1(x))
+
     def forward(self, x):
         """
         Forward pass for the 2D CNN model.
@@ -38,16 +51,7 @@ class CNNRUL2DClassifier(nn.Module):
         Returns:
         - Logits for classification (before softmax)
         """
-        x = torch.relu(self.conv1(x))
-        x = self.pool(x)
-        x = torch.relu(self.conv2(x))
-        x = self.pool(x)
-        x = torch.relu(self.conv3(x))
-        x = self.pool(x)
-
-        # Flatten and pass through FC layers
-        x = self.flatten(x)
-        x = torch.relu(self.fc1(x))
+        x = self.feature_extractor(x)
         return self.fc2(x)  # Output logits (apply softmax externally if needed)
 
     def get_predict_and_true(self, test_loader, device):

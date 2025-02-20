@@ -31,6 +31,24 @@ class HybridCNNClassifier(nn.Module):
         self.fc1 = nn.Linear(fc1d_input_size + fc2d_input_size, 128)
         self.fc2 = nn.Linear(128, num_classes)  # Classification output
 
+    def feature_extractor(self, x):
+        """Extract feature embeddings before the final classification layer."""
+        # 1D CNN Path
+        x1d = x.permute(0, 2, 1)  
+        x1d = self.conv1d(x1d)
+        x1d = self.pool1d(torch.relu(x1d))
+        x1d = torch.flatten(x1d, start_dim=1)
+
+        # 2D CNN Path
+        x2d = x.unsqueeze(1)  
+        x2d = self.conv2d(x2d)
+        x2d = self.pool2d(torch.relu(x2d))
+        x2d = torch.flatten(x2d, start_dim=1)
+
+        # Combine feature vectors
+        x_combined = torch.cat((x1d, x2d), dim=1)
+        return torch.relu(self.fc1(x_combined))  # Feature representation (128-dimensional)
+
     def forward(self, x):
         """
         Forward pass for the Hybrid CNN model.
@@ -41,22 +59,7 @@ class HybridCNNClassifier(nn.Module):
         Returns:
         - Logits for classification (before softmax)
         """
-        # 1D CNN Branch
-        x1d = x.permute(0, 2, 1)  # Convert [batch, seq_length, features] → [batch, features, seq_length]
-        x1d = self.conv1d(x1d)
-        x1d = self.pool1d(torch.relu(x1d))
-        x1d = torch.flatten(x1d, start_dim=1)
-
-        # 2D CNN Branch
-        x2d = x.unsqueeze(1)  # Convert [batch, seq_length, features] → [batch, 1, seq_length, features]
-        x2d = self.conv2d(x2d)
-        x2d = self.pool2d(torch.relu(x2d))
-        x2d = torch.flatten(x2d, start_dim=1)
-
-        # Combine both branches
-        x_combined = torch.cat((x1d, x2d), dim=1)
-        x_combined = torch.relu(self.fc1(x_combined))
-
+        x_combined = self.feature_extractor(x)
         return self.fc2(x_combined)
 
     def get_predict_and_true(self, test_loader, device):
@@ -115,30 +118,52 @@ class ComplexHybridCNNClassifier(nn.Module):
 
         self.dropout = nn.Dropout(0.4)
 
-    def forward(self, x):
-        # 1d CNN Branch
-        x1d = x.permute(0, 2, 1)  # Convert [batch, seq_length, features] → [batch, features, seq_length]
+
+    def feature_extractor(self, x):
+        """Extract embeddings from both 1D and 2D CNN branches."""
+        # 1D CNN Path
+        x1d = x.permute(0, 2, 1)  
         x1d = self.pool1d(torch.relu(self.bn1d_1(self.conv1d_1(x1d))))
         x1d = self.pool1d(torch.relu(self.bn1d_2(self.conv1d_2(x1d))))
         x1d = self.pool1d(torch.relu(self.bn1d_3(self.conv1d_3(x1d))))
         x1d = torch.flatten(x1d, start_dim=1)
 
-        # 2d CNN Branch
-        x2d = x.unsqueeze(1)  # Convert [batch, seq_length, features] → [batch, 1, seq_length, features]
+        # 2D CNN Path
+        x2d = x.unsqueeze(1)  
         x2d = self.pool2d(torch.relu(self.bn2d_1(self.conv2d_1(x2d))))
         x2d = self.pool2d(torch.relu(self.bn2d_2(self.conv2d_2(x2d))))
         x2d = self.pool2d(torch.relu(self.bn2d_3(self.conv2d_3(x2d))))
         x2d = torch.flatten(x2d, start_dim=1)
 
-        # Combine both branches
+        # Combine feature vectors
         x_combined = torch.cat((x1d, x2d), dim=1)
+        return torch.relu(self.fc1(x_combined))
 
-        # Fully Connected Layers
-        x_combined = torch.relu(self.fc1(x_combined))
-        x_combined = self.dropout(x_combined)
-        x_combined = torch.relu(self.fc2(x_combined))
-        x_combined = self.dropout(x_combined)
+    def forward(self, x):
+        # # 1d CNN Branch
+        # x1d = x.permute(0, 2, 1)  # Convert [batch, seq_length, features] → [batch, features, seq_length]
+        # x1d = self.pool1d(torch.relu(self.bn1d_1(self.conv1d_1(x1d))))
+        # x1d = self.pool1d(torch.relu(self.bn1d_2(self.conv1d_2(x1d))))
+        # x1d = self.pool1d(torch.relu(self.bn1d_3(self.conv1d_3(x1d))))
+        # x1d = torch.flatten(x1d, start_dim=1)
 
+        # # 2d CNN Branch
+        # x2d = x.unsqueeze(1)  # Convert [batch, seq_length, features] → [batch, 1, seq_length, features]
+        # x2d = self.pool2d(torch.relu(self.bn2d_1(self.conv2d_1(x2d))))
+        # x2d = self.pool2d(torch.relu(self.bn2d_2(self.conv2d_2(x2d))))
+        # x2d = self.pool2d(torch.relu(self.bn2d_3(self.conv2d_3(x2d))))
+        # x2d = torch.flatten(x2d, start_dim=1)
+
+        # # Combine both branches
+        # x_combined = torch.cat((x1d, x2d), dim=1)
+
+        # # Fully Connected Layers
+        # x_combined = torch.relu(self.fc1(x_combined))
+        # x_combined = self.dropout(x_combined)
+        # x_combined = torch.relu(self.fc2(x_combined))
+        # x_combined = self.dropout(x_combined)
+        x_combined = self.feature_extractor(x)
+        x_combined = self.dropout(torch.relu(self.fc2(x_combined)))
         return self.fc3(x_combined)
 
     def get_predict_and_true(self, data_loader, device):
