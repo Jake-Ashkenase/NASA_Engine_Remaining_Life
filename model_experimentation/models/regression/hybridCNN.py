@@ -39,7 +39,7 @@ class HybridCNNRegression(nn.Module):
         x_combined = torch.relu(self.fc1(x_combined))
         return self.fc2(x_combined)
 
-    def get_predict_and_true(self, data_loader):
+    def get_predict_and_true(self, data_loader, device):
         """
         Get the predicted and true values for a DataLoader.
         Args:
@@ -52,7 +52,7 @@ class HybridCNNRegression(nn.Module):
 
         with torch.no_grad():
             for inputs, targets in data_loader:
-                inputs = inputs.to(self.device)
+                inputs = inputs.to(device)
                 outputs = self(inputs).squeeze()
                 predicted.extend(outputs.cpu().numpy())
                 true.extend(targets.cpu().numpy())
@@ -130,7 +130,7 @@ class ComplexHybridCNNRegression(nn.Module):
 
         with torch.no_grad():
             for inputs, targets in data_loader:
-                inputs = inputs.to(self.device)
+                inputs = inputs.to(device)
                 outputs = self(inputs).squeeze()
                 predicted.extend(outputs.cpu().numpy())
                 true.extend(targets.cpu().numpy())
