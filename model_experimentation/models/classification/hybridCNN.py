@@ -162,8 +162,8 @@ class ComplexHybridCNNClassifier(nn.Module):
         # x_combined = self.dropout(x_combined)
         # x_combined = torch.relu(self.fc2(x_combined))
         # x_combined = self.dropout(x_combined)
-        x_combined = self.feature_extractor(x)
-        x_combined = self.dropout(torch.relu(self.fc2(x_combined)))
+        x = self.feature_extractor(x)
+        x_combined = self.dropout(torch.relu(self.fc2(x)))
         return self.fc3(x_combined)
 
     def get_predict_and_true(self, data_loader, device):
