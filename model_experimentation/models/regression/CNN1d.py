@@ -1,6 +1,7 @@
 import torch.nn as nn
 import torch
 
+
 class CNNRULRegression(nn.Module):
     def __init__(self, num_features):
         super(CNNRULRegression, self).__init__()

@@ -97,7 +97,7 @@ def create_train_test_dataloaders_old(X, y, test_size=0.2, batch_size=64, shuffl
 
 
 def create_train_test_dataloaders(X, y, test_size=0.2, batch_size=64, shuffle=True, dim="1d",
-                                  max_samples_per_class=None):
+                                  max_samples_per_class=None, max_samples=None):
     """
     Split the dataset into train and test sets and create DataLoaders.
     Args:
@@ -108,6 +108,7 @@ def create_train_test_dataloaders(X, y, test_size=0.2, batch_size=64, shuffle=Tr
         shuffle (bool): Whether to shuffle the dataset.
         dim (str): "1d" for 1D CNN input, "2d" for 2D CNN input.
         max_samples_per_class (int): Maximum samples per class to balance data.
+        max_samples (int): Maximum total samples to use from the dataset.
 
     Returns:
         tuple: (train_loader, test_loader)
@@ -135,6 +136,10 @@ def create_train_test_dataloaders(X, y, test_size=0.2, batch_size=64, shuffle=Tr
     if shuffle:
         shuffle_idxs = np.random.permutation(len(y))
         X, y = X[shuffle_idxs], y[shuffle_idxs]
+
+    # Limit total samples if max_samples is set
+    if max_samples is not None:
+        X, y = X[:max_samples], y[:max_samples]
 
     # Split into train and test sets
     split_idx = int(len(y) * (1 - test_size))

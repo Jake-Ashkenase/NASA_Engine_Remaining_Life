@@ -34,6 +34,7 @@ class CNNRUL2DRegression(nn.Module):
         Get the predicted and true values for a DataLoader.
         Args:
             data_loader (torch.utils.data.DataLoader): DataLoader for the dataset.
+            device (str): Device to run the model on ('cuda' or 'cpu').
         Returns:
             tuple: (predicted, true)
         """
@@ -42,7 +43,7 @@ class CNNRUL2DRegression(nn.Module):
 
         with torch.no_grad():
             for inputs, targets in data_loader:
-                inputs = inputs.to(self.device)
+                inputs = inputs.to(device)
                 outputs = self(inputs).squeeze()
                 predicted.extend(outputs.cpu().numpy())
                 true.extend(targets.cpu().numpy())

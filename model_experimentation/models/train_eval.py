@@ -5,6 +5,7 @@ import sys
 import os
 from sklearn.metrics import confusion_matrix
 import seaborn as sns
+import pandas as pd
 
 parent_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "../.."))
 sys.path.append(parent_dir)
@@ -13,9 +14,6 @@ sys.path.append(data_structures_path)
 from data_structures import EarlyStopper
 from .regression import CNNRULRegression
 from .classification import CNNRULClassifier
-
-# from torch.utils.tensorboard import SummaryWriter
-# writer = SummaryWriter(log_dir="runs/test_embeddings")
 
 
 def evaluate_model(model, data_loader, criterion, device, print_loss=True):
@@ -31,7 +29,7 @@ def evaluate_model(model, data_loader, criterion, device, print_loss=True):
                 inputs = inputs.permute(0, 2, 1)
 
             outputs = model(inputs).squeeze()
-            loss = criterion(outputs, targets.long()) # had to change from targets to targets.long so it would work for 1d CNN
+            loss = criterion(outputs, targets)
             overall_loss += loss.item()
 
     avg_loss = overall_loss / len(data_loader)
@@ -46,20 +44,17 @@ def train_model(model, train_loader, test_loader, criterion, optimizer, device, 
     model.to(device)
     history = {'train_loss': [], 'test_loss': []}
     early_stopper = EarlyStopper(patience=3, min_delta=.01)
-
     for epoch in range(num_epochs):
         model.train()
         running_loss = 0.0
-
         for inputs, targets in train_loader:
             inputs, targets = inputs.to(device), targets.to(device)
             # Adjust shape based on model type
             if isinstance(model, CNNRULRegression) or isinstance(model, CNNRULClassifier):  # 1D CNN
                 inputs = inputs.permute(0, 2, 1)
-
             optimizer.zero_grad()
             outputs = model(inputs).squeeze()
-            loss = criterion(outputs, targets.long()) # had to change from targets to targets.long so it would work for 1d CNN
+            loss = criterion(outputs, targets)
             loss.backward()
             optimizer.step()
 
@@ -80,58 +75,11 @@ def train_model(model, train_loader, test_loader, criterion, optimizer, device, 
 
             if early_stopper.early_stop(avg_train_loss):
                 break
-        
-    # if hasattr(model, 'feature_extractor'):
-    #     log_embeddings(model, train_loader, device)
 
     return history
 
 
-def log_embeddings(model, data_loader, device, num_samples=500):
-    """
-    Logs embeddings for visualization in TensorBoard.
-
-    Works with:
-    - CNNRULClassifier (1D CNN)
-    - CNNRUL2DClassifier (2D CNN)
-    - HybridCNNClassifier (1D + 2D Hybrid CNN)
-    - ComplexHybridCNNClassifier (Advanced 1D + 2D Hybrid CNN)
-
-    Parameters:
-    - model: PyTorch model.
-    - data_loader: DataLoader providing test/validation data.
-    - device: 'cuda' or 'cpu'.
-    - num_samples: Max number of samples to log.
-    """
-    model.eval()
-    embeddings = []
-    labels_list = []
-
-    with torch.no_grad():
-        for i, (inputs, labels) in enumerate(data_loader):
-            inputs, labels = inputs.to(device), labels.to(device)
-            if isinstance(model, CNNRULClassifier):
-                print("got here")
-                inputs = inputs.permute(0, 2, 1)
-
-            # Use feature_extractor()
-            features = model.feature_extractor(inputs)
-            embeddings.append(features.cpu().numpy())
-            labels_list.append(labels.cpu().numpy())
-
-            # Stop once we've collected enough samples
-            if len(embeddings) * inputs.shape[0] >= num_samples:
-                break
-
-    embeddings = np.concatenate(embeddings, axis=0)
-    labels_list = np.concatenate(labels_list, axis=0)
-
-    # Log embeddings to TensorBoard
-    writer.add_embedding(mat=embeddings, metadata=labels_list, tag="Model_Embeddings")
-    writer.close()
-
-
-def plot_loss(history):
+def plot_loss(history, save_as=None):
     epochs = range(1, len(history['train_loss']) + 1)
 
     plt.figure(figsize=(8, 5))
@@ -143,10 +91,13 @@ def plot_loss(history):
     plt.title('Training vs. Test Loss')
     plt.legend()
     plt.grid(True)
+    if save_as:
+        plt.savefig(save_as)
     plt.show()
 
 
-def plot_rul_predictions(model, test_loader, device):
+
+def plot_rul_predictions(model, test_loader, device, save_as=None, aggregate=False, shaded_region=False):
     """
     Plots predicted RUL vs. actual RUL for the test set.
 
@@ -154,16 +105,47 @@ def plot_rul_predictions(model, test_loader, device):
         model (torch.nn.Module): Trained model for RUL prediction.
         test_loader (DataLoader): DataLoader containing test data.
         device (str): 'cuda' or 'cpu' based on availability.
+        save_as (str, optional): Path to save the plot. If None, the plot will not be saved.
+        aggregate (bool, optional): If True, aggregates predictions for unique actual RUL values.
+        shaded_region (bool, optional): If True, shades the region between min and max predictions for each unique
+            actual RUL value.
     """
     predicted_rul, actual_rul = model.get_predict_and_true(test_loader, device)
     plt.figure(figsize=(8, 6))
-    plt.scatter(actual_rul, predicted_rul, alpha=0.5, label="Predicted vs Actual", color="blue")
+
+    if aggregate or shaded_region:
+        # Convert to Pandas DataFrame for efficient grouping
+        df = pd.DataFrame({"actual_rul": actual_rul, "predicted_rul": predicted_rul})
+        grouped = df.groupby("actual_rul")["predicted_rul"]
+
+        # Compute mean, min, and max for each actual RUL value
+        mean_pred = grouped.mean()
+        min_pred = grouped.min()
+        max_pred = grouped.max()
+
+        # Sort by actual RUL for proper plotting
+        sorted_actual = mean_pred.index
+        sorted_mean_pred = mean_pred.values
+        sorted_min_pred = min_pred.values
+        sorted_max_pred = max_pred.values
+
+        if shaded_region:
+            plt.fill_between(sorted_actual, sorted_min_pred, sorted_max_pred, color="blue", alpha=0.2,
+                             label="Prediction Range")
+
+        if aggregate:
+            plt.plot(sorted_actual, sorted_mean_pred, color="blue", label="Mean Prediction")
+    else:
+        plt.scatter(actual_rul, predicted_rul, alpha=0.5, label="Predicted vs Actual", color="blue", s=5)
+    #plt.scatter(actual_rul, predicted_rul, alpha=0.5, label="Predicted vs Actual", color="blue", s=5)
     plt.plot([min(actual_rul), max(actual_rul)], [min(actual_rul), max(actual_rul)], 'r--', label="Perfect Prediction")
     plt.xlabel("Actual RUL")
     plt.ylabel("Predicted RUL")
     plt.title("Predicted vs. Actual RUL")
     plt.legend()
     plt.grid(True)
+    if save_as:
+        plt.savefig(save_as)
     plt.show()
 
 
@@ -173,7 +155,7 @@ def calculate_accuracy(predictions, targets):
     return correct_predictions / total_predictions
 
 
-def plot_confusion_matrix(y_true, y_pred):
+def plot_confusion_matrix(y_true, y_pred, save_as=None):
     # Create confusion matrix
     cm = confusion_matrix(y_true, y_pred)
 
@@ -184,4 +166,6 @@ def plot_confusion_matrix(y_true, y_pred):
     plt.xlabel('Predicted Label')
     plt.ylabel('True Label')
     plt.title('Confusion Matrix')
+    if save_as:
+        plt.savefig(save_as)
     plt.show()
