@@ -27,7 +27,7 @@ class CNNRUL2DRegression(nn.Module):
         # Flatten and pass through FC layers
         x = self.flatten(x)
         x = torch.relu(self.fc1(x))
-        return self.fc2(x)
+        return torch.relu(self.fc2(x))
 
     def get_predict_and_true(self, data_loader, device):
         """

@@ -22,3 +22,29 @@ class AsymmetricHuberLoss(nn.Module):
         # Apply asymmetric penalty
         loss = torch.where(error > 0, self.alpha * loss, self.beta * loss)  # Higher penalty for overestimates
         return loss.mean()
+
+
+class MultiTaskLoss(nn.Module):
+    def __init__(self, lambda_rul=1.0, lambda_health=1.0):
+        """
+        Multi-task loss function balancing health state classification & RUL regression.
+
+        Parameters:
+        - lambda_rul: Weight for RUL loss.
+        - lambda_health: Weight for health state loss.
+        """
+        super(MultiTaskLoss, self).__init__()
+        self.lambda_rul = lambda_rul
+        self.lambda_health = lambda_health
+        self.bce_loss = nn.BCELoss()
+        self.mse_loss = nn.MSELoss()
+
+    def forward(self, health_pred, health_true, rul_pred, rul_true):
+        """
+        Computes the weighted multi-task loss.
+        """
+        loss_health = self.bce_loss(health_pred, health_true.float())
+        loss_rul = self.mse_loss(rul_pred, rul_true)
+
+        return self.lambda_health * loss_health + self.lambda_rul * loss_rul
+
