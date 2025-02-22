@@ -71,7 +71,7 @@ class ComplexHybridCNNRegression(nn.Module):
         self.bn1d_2 = nn.BatchNorm1d(64)
         self.bn1d_3 = nn.BatchNorm1d(128)
 
-        ## 2d CNN Branch (Feature Interactions)
+        # 2d CNN Branch (Feature Interactions)
         self.conv2d_1 = nn.Conv2d(in_channels=1, out_channels=16, kernel_size=(3, 3), padding=1)
         self.conv2d_2 = nn.Conv2d(in_channels=16, out_channels=32, kernel_size=(3, 3), padding=1)
         self.conv2d_3 = nn.Conv2d(in_channels=32, out_channels=64, kernel_size=(3, 3), padding=1)
