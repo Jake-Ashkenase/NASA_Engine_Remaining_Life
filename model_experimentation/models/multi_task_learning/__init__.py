@@ -1,3 +1,3 @@
-from .mlt import MultiTaskCNN
+from .mlt import CNNRUL2DMultiTask
 
-__all__ = ["MultiTaskCNN"]
+__all__ = ["CNNRUL2DMultiTask"]

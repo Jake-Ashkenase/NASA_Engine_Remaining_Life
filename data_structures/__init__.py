@@ -1,7 +1,8 @@
 from .dataset import RULDataset, create_train_test_dataloaders
 from .EarlyStopper import EarlyStopper
-from .loss_functions import AsymmetricHuberLoss, SmoothAdaptiveAsymmetricHuberLoss, MultiTaskLoss, \
-    AdaptiveFrequencyAsymmetricHuberLoss
+from .loss_functions import AsymmetricHuberLoss, SmoothAdaptiveAsymmetricHuberLoss, MultiTaskCriterion, \
+    AdaptiveFrequencyAsymmetricHuberLoss, FrequencyWeightedMSELoss
 
 __all__ = ["RULDataset", "create_train_test_dataloaders", "EarlyStopper", "AsymmetricHuberLoss",
-           "SmoothAdaptiveAsymmetricHuberLoss", "MultiTaskLoss", "AdaptiveFrequencyAsymmetricHuberLoss"]
+           "SmoothAdaptiveAsymmetricHuberLoss", "MultiTaskCriterion", "AdaptiveFrequencyAsymmetricHuberLoss",
+           "FrequencyWeightedMSELoss"]

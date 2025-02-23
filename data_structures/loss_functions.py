@@ -1,5 +1,6 @@
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
 
 
 class AsymmetricHuberLoss(nn.Module):
@@ -67,7 +68,7 @@ class SmoothAdaptiveAsymmetricHuberLoss(nn.Module):
 
 
 class AdaptiveFrequencyAsymmetricHuberLoss(nn.Module):
-    def __init__(self, frequency_map, base_delta=5.0, min_weight=1.0, max_weight=2.0, overestimate_weight=2.0, underestimate_scale=0.025):
+    def __init__(self, frequency_map, base_delta=5.0, min_weight=1.0, max_weight=3.0, overestimate_weight=2.0, underestimate_scale=0.05, overestimate_bias=0):
         """
         Adaptive Frequency-Weighted Asymmetric Huber Loss:
         - Overestimates are penalized more at low RUL.
@@ -88,6 +89,7 @@ class AdaptiveFrequencyAsymmetricHuberLoss(nn.Module):
         self.max_weight = max_weight
         self.overestimate_weight = overestimate_weight
         self.underestimate_scale = underestimate_scale
+        self.overestimate_bias = overestimate_bias
 
     def forward(self, predictions, targets):
         errors = predictions - targets  # Positive -> Overestimate, Negative -> Underestimate
@@ -100,7 +102,7 @@ class AdaptiveFrequencyAsymmetricHuberLoss(nn.Module):
 
         # Asymmetric weight:
         weight_underestimate = 1 + self.underestimate_scale * targets  # More penalty for underestimates at high RUL
-        weight_overestimate = self.overestimate_weight * (torch.exp(-targets / 8) + 0.5)
+        weight_overestimate = self.overestimate_weight * (torch.exp(-targets / 10) + self.overestimate_bias)
 
         # Combined weighting
         weights_asym = torch.where(errors < 0, weight_underestimate, weight_overestimate)
@@ -119,27 +121,92 @@ class AdaptiveFrequencyAsymmetricHuberLoss(nn.Module):
         return (total_weight * huber_loss).mean()
 
 
-class MultiTaskLoss(nn.Module):
-    def __init__(self, lambda_rul=1.0, lambda_health=1.0):
+class MultiTaskCriterion(nn.Module):
+    def __init__(self, alpha=1.0, beta=1.0):
         """
-        Multi-task loss function balancing health state classification & RUL regression.
+        alpha: weight for RUL regression loss
+        beta:  weight for health classification loss
+        """
+        super(MultiTaskCriterion, self).__init__()
+        self.mse = nn.MSELoss()
+        self.bce = nn.BCEWithLogitsLoss()  # For binary classification using a single logit
+        self.alpha = alpha
+        self.beta = beta
 
-        Parameters:
-        - lambda_rul: Weight for RUL loss.
-        - lambda_health: Weight for health state loss.
+    def forward(self, outputs, targets):
         """
-        super(MultiTaskLoss, self).__init__()
-        self.lambda_rul = lambda_rul
-        self.lambda_health = lambda_health
-        self.bce_loss = nn.BCELoss()
-        self.mse_loss = nn.MSELoss()
+        outputs: [batch_size, 2]
+            - outputs[:,0] => RUL predictions
+            - outputs[:,1] => health logits
+        targets: [batch_size, 2]
+            - targets[:,0] => RUL ground truth
+            - targets[:,1] => health label (0 or 1)
+        """
+        # Separate the two tasks
+        rul_pred = outputs[:, 0]
+        health_logit = outputs[:, 1]
 
-    def forward(self, health_pred, health_true, rul_pred, rul_true):
-        """
-        Computes the weighted multi-task loss.
-        """
-        loss_health = self.bce_loss(health_pred, health_true.float())
-        loss_rul = self.mse_loss(rul_pred, rul_true)
+        rul_true = targets[:, 0]
+        health_true = targets[:, 1].float()
 
-        return self.lambda_health * loss_health + self.lambda_rul * loss_rul
+        # Compute each loss
+        # scale mse so it doesn't dominate bce
+        loss_rul = self.mse(rul_pred, rul_true) / torch.var(rul_true)
+        loss_health = self.bce(health_logit, health_true)
+
+        # Weighted sum
+        total_loss = self.alpha * loss_rul + self.beta * loss_health
+        return total_loss
+
+
+class FrequencyWeightedMSELoss(nn.Module):
+    def __init__(self, frequency_map, max_weight=3.0, min_weight=1.0):
+        """
+        Frequency-weighted Mean Squared Error loss initialized with a frequency map.
+
+        Args:
+            frequency_map (dict): Dictionary mapping target values to their frequency counts.
+        """
+        super(FrequencyWeightedMSELoss, self).__init__()
+
+        # # Convert frequency map to tensor
+        # max_value = max(frequency_map.keys())
+        # frequencies = torch.zeros(max_value + 1, dtype=torch.float32)
+        # for value, freq in frequency_map.items():
+        #     frequencies[value] = freq
+        #
+        # # Avoid division by zero
+        # frequencies += 1e-6
+        #
+        # # Assign weights inversely proportional to frequencies
+        # weights = 1.0 / frequencies
+        #
+        # # Normalize weights to have mean of 1
+        # weights = weights / weights.mean()
+        #
+        # self.weights = weights
+        self.frequency_map = frequency_map
+        self.max_weight = max_weight
+        self.min_weight = min_weight
+
+    def forward(self, predictions, targets):
+        """
+        Calculate frequency-weighted MSE loss.
+
+        Args:
+            predictions (torch.Tensor): Model predictions.
+            targets (torch.Tensor): True targets.
+
+        Returns:
+            torch.Tensor: Computed loss value.
+        """
+        weights_freq = torch.tensor([self.max_weight / (self.frequency_map.get(float(t), 1) + 1)
+                                     for t in targets.cpu().numpy()], device=targets.device)
+        weights_freq = torch.clamp(weights_freq, self.min_weight, self.max_weight)  # Keep within range
+
+        mse = F.mse_loss(predictions, targets, reduction='none')
+        weighted_mse = mse * weights_freq
+
+        return weighted_mse.mean()
+
 
