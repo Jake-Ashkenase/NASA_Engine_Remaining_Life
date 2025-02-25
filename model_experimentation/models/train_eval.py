@@ -111,7 +111,7 @@ def plot_rul_predictions(model, test_loader, device, save_as=None, aggregate=Fal
             actual RUL value.
     """
     predicted_rul, actual_rul = model.get_predict_and_true(test_loader, device)
-    plt.figure(figsize=(8, 6))
+    plt.figure(figsize=(8, 6), facecolor='#384957')
 
     if aggregate or shaded_region:
         # Convert to Pandas DataFrame for efficient grouping
@@ -130,18 +130,20 @@ def plot_rul_predictions(model, test_loader, device, save_as=None, aggregate=Fal
         sorted_max_pred = max_pred.values
 
         if shaded_region:
-            plt.fill_between(sorted_actual, sorted_min_pred, sorted_max_pred, color="384957", alpha=0.2,
+            plt.fill_between(sorted_actual, sorted_min_pred, sorted_max_pred, color="#FF6B65", alpha=0.15,
                              label="Prediction Range")
 
         if aggregate:
-            plt.plot(sorted_actual, sorted_mean_pred, color="FF6B65", label="Mean Prediction")
+            plt.plot(sorted_actual, sorted_mean_pred, color="#FF6B65", label="Mean Prediction")
     else:
-        plt.scatter(actual_rul, predicted_rul, alpha=0.5, label="Predicted vs Actual", color="FF6B65", s=5)
+        plt.scatter(actual_rul, predicted_rul, alpha=0.5, label="Predicted vs Actual", color="#FF6B65", s=5)
     #plt.scatter(actual_rul, predicted_rul, alpha=0.5, label="Predicted vs Actual", color="blue", s=5)
-    plt.plot([min(actual_rul), max(actual_rul)], [min(actual_rul), max(actual_rul)], 'r--', label="Perfect Prediction", color="C2C2C2")
-    plt.xlabel("Actual RUL")
-    plt.ylabel("Predicted RUL")
-    plt.title("Predicted vs. Actual RUL")
+    plt.plot([min(actual_rul), max(actual_rul)], [min(actual_rul), max(actual_rul)], 'r--', label="Perfect Prediction", color="#384957")
+    plt.xlabel("Actual RUL", color="white")
+    plt.ylabel("Predicted RUL", color="white")
+    plt.title("Predicted vs. Actual RUL", color="white")
+    plt.xticks(color="white")
+    plt.yticks(color="white")
     plt.legend()
     plt.grid(True)
     if save_as:
