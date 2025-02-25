@@ -130,15 +130,15 @@ def plot_rul_predictions(model, test_loader, device, save_as=None, aggregate=Fal
         sorted_max_pred = max_pred.values
 
         if shaded_region:
-            plt.fill_between(sorted_actual, sorted_min_pred, sorted_max_pred, color="blue", alpha=0.2,
+            plt.fill_between(sorted_actual, sorted_min_pred, sorted_max_pred, color="384957", alpha=0.2,
                              label="Prediction Range")
 
         if aggregate:
-            plt.plot(sorted_actual, sorted_mean_pred, color="blue", label="Mean Prediction")
+            plt.plot(sorted_actual, sorted_mean_pred, color="FF6B65", label="Mean Prediction")
     else:
-        plt.scatter(actual_rul, predicted_rul, alpha=0.5, label="Predicted vs Actual", color="blue", s=5)
+        plt.scatter(actual_rul, predicted_rul, alpha=0.5, label="Predicted vs Actual", color="FF6B65", s=5)
     #plt.scatter(actual_rul, predicted_rul, alpha=0.5, label="Predicted vs Actual", color="blue", s=5)
-    plt.plot([min(actual_rul), max(actual_rul)], [min(actual_rul), max(actual_rul)], 'r--', label="Perfect Prediction")
+    plt.plot([min(actual_rul), max(actual_rul)], [min(actual_rul), max(actual_rul)], 'r--', label="Perfect Prediction", color="C2C2C2")
     plt.xlabel("Actual RUL")
     plt.ylabel("Predicted RUL")
     plt.title("Predicted vs. Actual RUL")
@@ -147,6 +147,10 @@ def plot_rul_predictions(model, test_loader, device, save_as=None, aggregate=Fal
     if save_as:
         plt.savefig(save_as)
     plt.show()
+
+# main line ff6b65
+# shaded region 384957
+# perfect pred line c2c2c2
 
 
 def calculate_accuracy(predictions, targets):
